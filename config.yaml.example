@@ -1,0 +1,30 @@
+spotify:
+  client_id: "YOUR_SPOTIFY_CLIENT_ID"
+  client_secret: "YOUR_SPOTIFY_CLIENT_SECRET"
+  redirect_uri: "http://127.0.0.1:8888/callback"
+
+ticketmaster:
+  api_key: "YOUR_TICKETMASTER_API_KEY"
+
+location:
+  address: "Your City, State"   # e.g. "Boston, MA" or "123 Main St, Springfield, IL"
+  radius_miles: 100
+
+playlists:
+  # Add Spotify playlist URIs here, e.g.:
+  # - "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"
+
+# Artists whose names produce noisy / false-positive Ticketmaster results.
+# These artists will be skipped during concert searches (matched by name,
+# case-insensitive). Add more names here as needed.
+skip_artists: []
+  # - "Houses"
+
+monitoring:
+  recently_played_interval_minutes: 60
+  playlist_interval_minutes: 360
+  concert_search_interval_minutes: 720
+
+output:
+  events_file: "data/events.json"
+  log_level: "INFO"   # DEBUG, INFO, WARNING, ERROR

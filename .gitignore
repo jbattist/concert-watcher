@@ -1,0 +1,20 @@
+# Secrets & generated files
+config.yaml
+.spotify_cache
+
+# Database & output
+data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Logs
+nohup.out
+*.log
