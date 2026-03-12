@@ -170,6 +170,23 @@ _HTML = r"""<!DOCTYPE html>
       color: var(--comment);
     }
 
+    /* mobile sort dropdown — hidden on desktop */
+    .sort-wrap { display: none; }
+
+    #sort-select {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--fg);
+      padding: 7px 10px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      flex: 1;
+      outline: none;
+    }
+
+    #sort-select:focus { border-color: var(--purple); }
+
     /* ── Table ───────────────────────────────────────────────────────── */
     .table-wrap {
       overflow-x: auto;
@@ -297,6 +314,19 @@ _HTML = r"""<!DOCTYPE html>
 
       .result-count { margin-left: 0; }
 
+      .sort-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .sort-wrap label {
+        color: var(--comment);
+        font-size: 0.82rem;
+        white-space: nowrap;
+      }
+
       .table-wrap { padding: 12px 12px 32px; }
 
       /* Convert table to stacked cards */
@@ -367,6 +397,18 @@ _HTML = r"""<!DOCTYPE html>
     <span class="toggle-track"></span>
     <span id="tog-label">Show tributes / false matches</span>
   </label>
+
+  <div class="sort-wrap">
+    <label for="sort-select">Sort by</label>
+    <select id="sort-select">
+      <option value="date:1">Event Date (soonest)</option>
+      <option value="added:-1">Date Added (newest)</option>
+      <option value="added:1">Date Added (oldest)</option>
+      <option value="artist:1">Artist (A–Z)</option>
+      <option value="distance_miles:1">Distance (nearest)</option>
+      <option value="price_min:1">Price (low–high)</option>
+    </select>
+  </div>
 
   <span class="result-count" id="rcount"></span>
 </div>
@@ -542,6 +584,12 @@ _HTML = r"""<!DOCTYPE html>
 
   document.getElementById('search').addEventListener('input', render);
   document.getElementById('tog-tribute').addEventListener('change', render);
+  document.getElementById('sort-select').addEventListener('change', () => {
+    const [col, dir] = document.getElementById('sort-select').value.split(':');
+    sortCol = col;
+    sortDir = parseInt(dir);
+    render();
+  });
 
   load();
 </script>
