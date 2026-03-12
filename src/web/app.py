@@ -219,6 +219,7 @@ _HTML = r"""<!DOCTYPE html>
     td { padding: 11px 13px; vertical-align: middle; }
 
     td.artist { color: var(--green);  font-weight: bold; }
+    td.added  { color: var(--comment); white-space: nowrap; }
     td.event  { color: var(--fg); }
     td.venue  { color: var(--fg); }
     td.city   { color: var(--comment); white-space: nowrap; }
@@ -263,6 +264,90 @@ _HTML = r"""<!DOCTYPE html>
     }
 
     .state-msg.loading { color: var(--purple); }
+
+    /* ── Mobile: card layout ─────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      header {
+        flex-wrap: wrap;
+        padding: 12px 16px;
+        gap: 8px;
+      }
+
+      header h1 {
+        font-size: 1.05rem;
+        letter-spacing: 2px;
+      }
+
+      .header-stats {
+        margin-left: 0;
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 10px 20px;
+        font-size: 0.8rem;
+      }
+
+      .controls {
+        padding: 10px 16px;
+        gap: 10px;
+      }
+
+      .search-wrap { width: 100%; }
+
+      #search { width: 100%; }
+
+      .result-count { margin-left: 0; }
+
+      .table-wrap { padding: 12px 12px 32px; }
+
+      /* Convert table to stacked cards */
+      table, tbody, tr, td { display: block; }
+      thead { display: none; }
+
+      tr {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        background: var(--bg-dark);
+      }
+
+      tr.tribute {
+        border-left: 3px solid var(--red);
+        background: rgba(255, 85, 85, 0.05);
+      }
+
+      tr:hover { background: var(--line); }
+
+      td {
+        display: flex;
+        align-items: baseline;
+        padding: 4px 0;
+        border: none;
+      }
+
+      td::before {
+        content: attr(data-label);
+        color: var(--comment);
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        min-width: 62px;
+        flex-shrink: 0;
+        margin-right: 10px;
+      }
+
+      td.artist {
+        font-size: 1rem;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 4px;
+      }
+
+      td.artist::before { display: none; }
+
+      td.dist  { text-align: left; }
+      td.price { text-align: left; }
+    }
   </style>
 </head>
 <body>
@@ -292,6 +377,7 @@ _HTML = r"""<!DOCTYPE html>
     <thead>
       <tr>
         <th data-col="date">Date</th>
+        <th data-col="added">Added</th>
         <th data-col="artist">Artist</th>
         <th data-col="event_name">Event</th>
         <th data-col="venue">Venue</th>
@@ -357,6 +443,7 @@ _HTML = r"""<!DOCTYPE html>
   function key(c, col) {
     switch (col) {
       case 'date':           return c.date;
+      case 'added':          return c.added;
       case 'artist':         return c.artist.toLowerCase();
       case 'event_name':     return c.event_name.toLowerCase();
       case 'venue':          return c.venue.toLowerCase();
@@ -403,7 +490,7 @@ _HTML = r"""<!DOCTYPE html>
     const tbody = document.getElementById('tbody');
     if (!rows.length) {
       tbody.innerHTML =
-        `<tr><td colspan="8" class="state-msg">No concerts match your filters.</td></tr>`;
+        `<tr><td colspan="9" class="state-msg">No concerts match your filters.</td></tr>`;
       return;
     }
 
@@ -420,14 +507,15 @@ _HTML = r"""<!DOCTYPE html>
       const tributeTag = c.filtered ? `<span class="tribute-tag">(Tribute)</span>` : '';
 
       return `<tr class="${c.filtered ? 'tribute' : ''}">
-        <td class="date">${esc(c.date)}</td>
+        <td class="date"    data-label="Date">${esc(c.date)}</td>
+        <td class="added"   data-label="Added">${esc(c.added)}</td>
         <td class="artist${c.filtered ? ' tribute-artist' : ''}">${esc(c.artist)}${tributeTag}</td>
-        <td class="event">${esc(c.event_name)}</td>
-        <td class="venue">${esc(c.venue)}</td>
-        <td class="city">${esc(c.city)}</td>
-        <td class="dist">${distStr}</td>
-        <td class="price">${priceStr}</td>
-        <td class="ticket">${ticketStr}</td>
+        <td class="event"   data-label="Event">${esc(c.event_name)}</td>
+        <td class="venue"   data-label="Venue">${esc(c.venue)}</td>
+        <td class="city"    data-label="City">${esc(c.city)}</td>
+        <td class="dist"    data-label="Miles">${distStr}</td>
+        <td class="price"   data-label="Price">${priceStr}</td>
+        <td class="ticket"  data-label="Tickets">${ticketStr}</td>
       </tr>`;
     }).join('');
   }
@@ -484,7 +572,8 @@ def api_concerts():
             """
             SELECT id, artist_name, event_name, venue_name, venue_city,
                    event_date, distance_miles, ticket_url,
-                   price_min, price_max, currency, filtered
+                   price_min, price_max, currency, filtered,
+                   first_discovered_at
             FROM concerts
             WHERE event_date >= date('now')
             ORDER BY event_date, artist_name
@@ -501,6 +590,7 @@ def api_concerts():
             "venue":          r["venue_name"],
             "city":           r["venue_city"],
             "date":           r["event_date"][:10],
+            "added":          r["first_discovered_at"][:10],
             "distance_miles": r["distance_miles"],
             "ticket_url":     r["ticket_url"],
             "price_min":      r["price_min"],
