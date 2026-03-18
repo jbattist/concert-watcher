@@ -8,8 +8,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import List, Tuple
 
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn, TimeElapsedColumn
+from rich.table import Column
+
 from src.concerts.musicbrainz import MusicBrainzClient
 from src.concerts.ticketmaster import TicketmasterClient, TicketmasterEvent
+from src.output.logger import console
 from src.storage.database import Concert, Database
 
 
@@ -78,23 +82,43 @@ def search_and_store_concerts(
     """
     new_event_ids: List[str] = []
 
-    for artist_id, artist_name in artists:
-        try:
-            events = tm.search_events(
-                artist_name=artist_name,
-                lat=lat,
-                lng=lng,
-                radius_miles=radius_miles,
-            )
-        except Exception:
-            # Don't let a single artist failure abort the whole batch
-            continue
+    _ARTIST_WIDTH = 30
 
-        for evt in events:
-            concert = _event_to_concert(evt, artist_id, artist_name)
-            is_new = db.insert_concert(concert)
-            if is_new:
-                new_event_ids.append(evt.event_id)
+    progress = Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}", table_column=Column(width=_ARTIST_WIDTH, no_wrap=True)),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TaskProgressColumn(),
+        TimeElapsedColumn(),
+        console=console,
+        transient=True,
+    )
+
+    with progress:
+        task = progress.add_task("Searching Ticketmaster...", total=len(artists))
+        for artist_id, artist_name in artists:
+            truncated = artist_name if len(artist_name) <= _ARTIST_WIDTH else artist_name[:_ARTIST_WIDTH - 1] + "\u2026"
+            progress.update(task, description=f"[cyan]{truncated}[/cyan]")
+            try:
+                events = tm.search_events(
+                    artist_name=artist_name,
+                    lat=lat,
+                    lng=lng,
+                    radius_miles=radius_miles,
+                )
+            except Exception:
+                # Don't let a single artist failure abort the whole batch
+                progress.advance(task)
+                continue
+
+            for evt in events:
+                concert = _event_to_concert(evt, artist_id, artist_name)
+                is_new = db.insert_concert(concert)
+                if is_new:
+                    new_event_ids.append(evt.event_id)
+
+            progress.advance(task)
 
     return new_event_ids
 

@@ -24,7 +24,7 @@ from src.config import load_config
 from src.monitoring.diff_engine import process_artist_batch, run_mb_checks, search_and_store_concerts
 from src.monitoring.scheduler import Scheduler
 from src.output.file_writer import write_events_file
-from src.output.logger import log_error, log_new_concerts, log_startup, log_sync_summary, setup_logging
+from src.output.logger import console, log_error, log_new_concerts, log_startup, log_sync_summary, setup_logging
 from src.sources.playlists import fetch_playlist_artists
 from src.sources.recently_played import fetch_recently_played_artists
 from src.storage.database import Database
@@ -74,35 +74,38 @@ def initial_sync(config, db: Database, sp, tm: TicketmasterClient, mb: MusicBrai
     log.info("Running initial full sync...")
 
     # --- Recently played ---
-    try:
-        artists, newest_ms = fetch_recently_played_artists(sp)
-        if newest_ms:
-            db.set_state("recently_played_cursor", str(newest_ms))
-        new_rp = process_artist_batch(db, artists, source="recently_played")
-        log_sync_summary("recently_played", len(artists), len(new_rp), 0)
-    except Exception as exc:
-        log_error("Failed to sync recently played", exc)
+    with console.status("[bold]Fetching recently played tracks...[/bold]"):
+        try:
+            artists, newest_ms = fetch_recently_played_artists(sp)
+            if newest_ms:
+                db.set_state("recently_played_cursor", str(newest_ms))
+            new_rp = process_artist_batch(db, artists, source="recently_played")
+            log_sync_summary("recently_played", len(artists), len(new_rp), 0)
+        except Exception as exc:
+            log_error("Failed to sync recently played", exc)
 
     # --- Playlists ---
     for playlist_uri in config.playlists:
-        try:
-            playlist_id, name, artists, content_hash = fetch_playlist_artists(sp, playlist_uri)
-            db.upsert_playlist(playlist_id, name, content_hash)
-            new_pl = process_artist_batch(db, artists, source="playlist")
-            log_sync_summary(f"playlist:{name}", len(artists), len(new_pl), 0)
-        except Exception as exc:
-            log_error(f"Failed to sync playlist {playlist_uri}", exc)
+        with console.status(f"[bold]Syncing playlist [cyan]{playlist_uri}[/cyan]...[/bold]"):
+            try:
+                playlist_id, name, artists, content_hash = fetch_playlist_artists(sp, playlist_uri)
+                db.upsert_playlist(playlist_id, name, content_hash)
+                new_pl = process_artist_batch(db, artists, source="playlist")
+                log_sync_summary(f"playlist:{name}", len(artists), len(new_pl), 0)
+            except Exception as exc:
+                log_error(f"Failed to sync playlist {playlist_uri}", exc)
 
     # --- MusicBrainz activity checks ---
-    try:
-        checked, skipped = run_mb_checks(db, mb)
-        if checked:
-            log.info(
-                f"MusicBrainz: checked {checked} artist(s), "
-                f"skipped {skipped} as no longer active."
-            )
-    except Exception as exc:
-        log_error("MusicBrainz checks failed", exc)
+    with console.status("[bold]Running MusicBrainz activity checks...[/bold]"):
+        try:
+            checked, skipped = run_mb_checks(db, mb)
+            if checked:
+                log.info(
+                    f"MusicBrainz: checked {checked} artist(s), "
+                    f"skipped {skipped} as no longer active."
+                )
+        except Exception as exc:
+            log_error("MusicBrainz checks failed", exc)
 
     # --- Concert search (only MB-confirmed active artists) ---
     try:
@@ -122,11 +125,12 @@ def initial_sync(config, db: Database, sp, tm: TicketmasterClient, mb: MusicBrai
         log_error("Failed initial concert search", exc)
 
     # --- Write output ---
-    try:
-        write_events_file(db, config.output.events_file)
-        log.info(f"events.json written to [cyan]{config.output.events_file}[/cyan]")
-    except Exception as exc:
-        log_error("Failed to write events.json", exc)
+    with console.status("[bold]Writing events.json...[/bold]"):
+        try:
+            write_events_file(db, config.output.events_file)
+            log.info(f"events.json written to [cyan]{config.output.events_file}[/cyan]")
+        except Exception as exc:
+            log_error("Failed to write events.json", exc)
 
 
 def main() -> None:
