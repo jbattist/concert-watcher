@@ -61,15 +61,57 @@ Alternatively, use the helper script:
 
 ## Running
 
-### Daemon (background scheduler)
+### As a systemd service (recommended — survives reboots)
+
+Service unit files are included in the repository. Install them once and both
+the daemon and web UI will start automatically on boot.
+
+```bash
+# 1. Copy the unit files into systemd's user-level service directory
+sudo cp concert-watcher.service     /etc/systemd/system/
+sudo cp concert-watcher-web.service /etc/systemd/system/
+
+# 2. Reload systemd so it sees the new units
+sudo systemctl daemon-reload
+
+# 3. Enable both services to start on boot
+sudo systemctl enable concert-watcher
+sudo systemctl enable concert-watcher-web
+
+# 4. Start them now (without rebooting)
+sudo systemctl start concert-watcher
+sudo systemctl start concert-watcher-web
+```
+
+Check status and logs:
+
+```bash
+sudo systemctl status concert-watcher
+sudo journalctl -u concert-watcher -f          # follow live logs
+sudo journalctl -u concert-watcher-web -f      # follow web UI logs
+```
+
+Stop or restart:
+
+```bash
+sudo systemctl stop    concert-watcher
+sudo systemctl restart concert-watcher
+```
+
+> **Note:** The unit files assume the project is installed at
+> `/home/joe/concert-watcher` and runs as user `joe`. If you installed it
+> elsewhere or under a different user, edit the `User=` and `WorkingDirectory=`
+> lines in both `.service` files before copying them.
+
+### Manual / foreground (development)
 
 ```bash
 .venv/bin/python -m src.main
-# or in the background:
+# or in the background (no reboot persistence):
 nohup .venv/bin/python -m src.main &
 ```
 
-### Web UI
+### Web UI (manual)
 
 ```bash
 .venv/bin/python -m src.web.app

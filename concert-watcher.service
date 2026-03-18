@@ -1,0 +1,19 @@
+[Unit]
+Description=Concert Watcher - Spotify/Ticketmaster background scheduler
+Documentation=https://github.com/YOUR_USERNAME/concert-watcher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=joe
+WorkingDirectory=/home/joe/concert-watcher
+ExecStart=/home/joe/concert-watcher/.venv/bin/python -m src.main
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=concert-watcher
+
+[Install]
+WantedBy=multi-user.target

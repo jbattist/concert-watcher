@@ -1,0 +1,19 @@
+[Unit]
+Description=Concert Watcher - Web UI (Flask on port 7474)
+Documentation=https://github.com/YOUR_USERNAME/concert-watcher
+After=network.target concert-watcher.service
+Wants=concert-watcher.service
+
+[Service]
+Type=simple
+User=joe
+WorkingDirectory=/home/joe/concert-watcher
+ExecStart=/home/joe/concert-watcher/.venv/bin/python -m src.web.app
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=concert-watcher-web
+
+[Install]
+WantedBy=multi-user.target
